@@ -8,20 +8,19 @@ using UnityEngine.Networking;
 public class Orientation : MonoBehaviour
 {
 
-    bool socketReady = false;                
-    TcpClient mySocket;
-    public NetworkStream NetStream;
+    private bool socketReady = false;                
+    private TcpClient mySocket;
+    private NetworkStream NetStream;
     StreamWriter sw;
     StreamReader sr;
     public string Host = "192.88.1.1";
     public int Port = 8080;
-    public bool lightStatus;
     //Start connection with Quad here
     private void Awake()
     {
         Connect();
     }
-    // Start is called before the first frame update
+    // Initialize objects
     void Start()
     {
         
@@ -29,7 +28,7 @@ public class Orientation : MonoBehaviour
 
     // Send the char requesting the sensor data from drone. Drone responds, use data.
     void Update()
-    {
+    {if(socketReady)
         while(NetStream.DataAvailable)
         {
             string data = ReadSocket();
@@ -38,6 +37,7 @@ public class Orientation : MonoBehaviour
     }
     private void Connect()
     {
+        Debug.Log("Trying to connect...");
         try
         {
             mySocket = new TcpClient(Host, Port);
