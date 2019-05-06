@@ -14,9 +14,9 @@ public class Orientation : MonoBehaviour
 
     bool socketReady = false;
     //Test
-    private String Host = "127.0.0.1";
+    //private String Host = "127.0.0.1";
     //Real
-    //private String Host = "192.168.1.1";
+    private String Host = "192.168.1.1";
     public Int32 Port = 8080;
     /// <summary>
     /// Get LoopTime Button.(The quad manages itself by entering a fail loop if the main execution loop takes to long, 
@@ -27,6 +27,9 @@ public class Orientation : MonoBehaviour
     /// Sensor Data Button. Although the scene will audit the quad's data "quietly" in Update(), This button will print to console.
     /// </summary>
     private Button SDB;
+    /// <summary>
+    /// Send Debug Message Button
+    /// </summary>
     private Button SendDBM;
     //May remove the Retry connection button(Code not written yet, but it's in the scene)
 
@@ -34,18 +37,25 @@ public class Orientation : MonoBehaviour
     private Text Status;
     private InputField InputField;
     private Text LogText;
+    /// <summary>
+    /// Buffer for Log Messages.
+    /// </summary>
     private string Buffer="";
+    /// <summary>
+    /// Buffer for sensor data
+    /// </summary>
+    private string SensorBuf = "";
     private readonly string x = "Connection Status: ";
-
+    /// <summary>
+    /// Thread for UART communication with Drone
+    /// </summary>
     Thread thread;
-    #region private members 	
+    	
     private TcpClient socketConnection;
     private Thread clientReceiveThread;
     private bool isDebug = false;
     private bool isSensorPress = false;
-
-    private string SensorBuf = "";
-    #endregion
+    private GameObject Quad;
     // Start connection with Quad and Initialize objects
     void Start()
     {
@@ -61,6 +71,7 @@ public class Orientation : MonoBehaviour
 
         Status = GameObject.Find("Status").GetComponent<Text>();
 
+        Quad = GameObject.Find("Quad");
         ConnectToTcpServer();
     }
 
@@ -85,7 +96,7 @@ public class Orientation : MonoBehaviour
             LogText.text += ("\n" + SensorBuf);
             //clear buffer
             SensorBuf = "";
-            Debug.Log(ParseData(" "+ SensorBuf));
+            Debug.Log(" " + ParseData(" "+ SensorBuf));
         }
     }
     void RetryConnect()
@@ -176,7 +187,7 @@ public class Orientation : MonoBehaviour
                         Debug.Log("server message received as: " + serverMessage);
                         if(isSensorPress)
                         {
-                            SensorBuf = serverMessage;
+                            SensorBuf = string.Copy(serverMessage);
                             isSensorPress = false;
                             Buffer=string.Copy(SensorBuf);
                         }
@@ -184,10 +195,10 @@ public class Orientation : MonoBehaviour
                         {
                             if(serverMessage.ToCharArray()[0]=='A' || serverMessage.ToCharArray()[0]=='G')
                             {
-                                SensorBuf = serverMessage;
+                                SensorBuf = string.Copy(serverMessage);
                                 //SensorBuf = Buffer;
                             }
-                            Buffer = serverMessage;
+                            Buffer = string.Copy(serverMessage);
                             //SensorBuf = serverMessage;
                         }
                     }
@@ -234,13 +245,21 @@ public class Orientation : MonoBehaviour
     }
     private float[] ParseData(string dataLine)
     {
-        float[] ret = new float[3];
+        string test1 = "A - .03516 - .23841 - .97052";
+        string test2 = "G .00875 .00793 .00183";
+        float[] ret = new float[4];
         string[] temp = dataLine.Split(' ');
-        for (int dex = 0; dex < temp.Length; dex++)
+        for (int dex = 1; dex < temp.Length; dex++)
         {
-            ret[dex] = float.Parse(temp[dex]);
+            Debug.Log(temp.Length + " data: " + temp[dex].ToString()+"x "+temp);
+            //ret[dex] = (float)double.Parse(temp[dex]);
+            
             Debug.Log(dex + " " + ret[dex]);
         }
         return ret;
+    }
+    private void RotateQuad()
+    {
+
     }
 }
