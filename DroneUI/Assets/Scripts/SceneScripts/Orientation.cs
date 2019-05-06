@@ -14,9 +14,9 @@ public class Orientation : MonoBehaviour
 
     bool socketReady = false;
     //Test
-    //private String Host = "127.0.0.1";
+    private String Host = "127.0.0.1";
     //Real
-    private String Host = "192.168.1.1";
+    //private String Host = "192.168.1.1";
     public Int32 Port = 8080;
     /// <summary>
     /// Get LoopTime Button.(The quad manages itself by entering a fail loop if the main execution loop takes to long, 
@@ -78,6 +78,7 @@ public class Orientation : MonoBehaviour
     // Send the char requesting the sensor data from drone. Drone responds, use data.
     void Update()
     {
+        SendMSG("s");
         //Debug.Log("Update");
         if (Buffer!="")
         {
@@ -91,12 +92,16 @@ public class Orientation : MonoBehaviour
         if(SensorBuf!="")
         {
             //print to debug
-            Debug.Log(SensorBuf);
+            //Debug.Log(SensorBuf);
             //add to our console
-            LogText.text += ("\n" + SensorBuf);
+            //LogText.text += ("\n" + SensorBuf); //Don't need this, the buffer is the "ultimate log message reciever. If it's going in the app's log, then it's put in the buffer.
+            float[] parseTest = ParseData(" " + SensorBuf);
+            RotateQuad(parseTest);
+            Debug.Log(parseTest[0]+"  " + parseTest[1]+ "  " +parseTest[2]);
             //clear buffer
             SensorBuf = "";
-            Debug.Log(" " + ParseData(" "+ SensorBuf));
+            //This was never going to work, you cleared the buffer, why would you be able to parse data?
+            //Debug.Log(" " + ParseData(" "+ SensorBuf));
         }
     }
     void RetryConnect()
@@ -120,7 +125,7 @@ public class Orientation : MonoBehaviour
     void SensorData()
     {
         isSensorPress = true;
-        SendMSG("s");
+        //SendMSG("s");
         if (!socketReady)
         {
 
@@ -193,12 +198,15 @@ public class Orientation : MonoBehaviour
                         }
                         else
                         {
-                            if(serverMessage.ToCharArray()[0]=='A' || serverMessage.ToCharArray()[0]=='G')
+                            if (serverMessage.ToCharArray()[0] == 'A' || serverMessage.ToCharArray()[0] == 'G')
                             {
                                 SensorBuf = string.Copy(serverMessage);
                                 //SensorBuf = Buffer;
                             }
-                            Buffer = string.Copy(serverMessage);
+                            else
+                            {
+                                Buffer = string.Copy(serverMessage);
+                            }
                             //SensorBuf = serverMessage;
                         }
                     }
@@ -234,7 +242,7 @@ public class Orientation : MonoBehaviour
                 byte[] clientMessageAsByteArray = Encoding.ASCII.GetBytes(clientMessage);
                 // Write byte array to socketConnection stream.
                 stream.Write(clientMessageAsByteArray, 0, clientMessageAsByteArray.Length);
-                Debug.Log("Client sent his message - should be received by server");
+                //Debug.Log("Client sent his message - should be received by server");
             }
         }
         catch (SocketException socketException)
@@ -245,21 +253,40 @@ public class Orientation : MonoBehaviour
     }
     private float[] ParseData(string dataLine)
     {
-        string test1 = "A - .03516 - .23841 - .97052";
-        string test2 = "G .00875 .00793 .00183";
-        float[] ret = new float[4];
+        float[] ret = new float[3];
         string[] temp = dataLine.Split(' ');
+        
+        //Debug.Log(dataLine);
+        //bool neg = false;
+        int retDex = 0;
         for (int dex = 1; dex < temp.Length; dex++)
         {
-            Debug.Log(temp.Length + " data: " + temp[dex].ToString()+"x "+temp);
-            //ret[dex] = (float)double.Parse(temp[dex]);
             
-            Debug.Log(dex + " " + ret[dex]);
+            //Debug.Log(temp.Length + " data: " + temp[dex].ToString()+" x ");
+            //ret[dex] = (float)double.Parse(temp[dex]);
+            if(float.TryParse(temp[dex],out ret[retDex]))
+            {
+                retDex++;
+            }
+            //Debug.Log(dex + " " + ret[dex]);
         }
+        
         return ret;
     }
-    private void RotateQuad()
+    private void RotateQuad(float[] data)
     {
+        float scale = (float)(180 / Math.PI);
+        /*
+        Vector3 delta = new Vector3(data[0], data[1], data[2]);
+        
+        Quad.transform.Rotate(scale*delta);
+        */
+        float angle_x = (float)(Math.Atan(data[1] / Math.Sqrt( (data[0]*data[0]) + (data[2]*data[2]) )));
+        float angle_y = (float)(Math.Atan(data[0] / Math.Sqrt((data[1] * data[1]) + (data[2] * data[2]))));
+        Vector3 delta = new Vector3(angle_x, 0, angle_y);
+        //Quad.transform.Rotate(scale*delta);
+        Quaternion target = Quaternion.Euler(angle_x*scale, 0, angle_y*scale);
+        Quad.transform.rotation = Quaternion.Slerp(transform.rotation, target, Time.deltaTime*5);
 
     }
 }
